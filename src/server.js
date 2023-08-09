@@ -1,33 +1,47 @@
-import http from 'http'
-import { Json } from './middlewares/json.js'
-import { routes } from './routes.js'
-import { extractQueryParams } from './utils/extract-query-params.js'
+import http from 'node:http';
+import { json } from './middlewares/json.js';
+import { routes } from './routes.js';
+import { extractQueryParams } from './utils/extract-query-params.js';
 
+const server = http.createServer(async (req, res) => {
+  
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5173');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.writeHead(200);
+    res.end();
+    return;
+  }
 
+  res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-const server = http.createServer( async (req, res)=>{
-   const { method, url} = req
+  const { method, url } = req;
 
-   await Json(req, res)
+  await json(req, res);
 
-   const route = routes.find(route => {
-    return method.route === route && method.path.test(url) 
-   })
+  const route = routes.find((route) => {
+    return route.method === method && route.path.test(url);
+  });
 
-   if(route){
-    const routeParams = req.url.match(route.path)
+  if (route) {
+    const routeParams = req.url.match(route.path);
 
-    const { query, ...params } = routeParams.groups
+    const { query, ...params } = routeParams.groups;
 
-    req.params = params
-    req.query = query ? extractQueryParams(query) : {}
+    req.params = params;
+    req.query = query ? extractQueryParams(query) : {};
 
-    return route.handler(res, req)
-   }
+    return route.handler(req, res);
+  } else {
+    // Return a 404 error if no matching route is found
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ Nome: 'Hello' }));
+  }
+});
 
-   return res.writeHead(404).end()
-
-})
-//criando o servidor
-
-server.listen(3333) //informando o servidor para rodar na porta 3333, sempre que acessar o localhost vai entrar no servidor
+server.listen(3333, () => {
+  console.log("Server is running on port 3333");
+});
